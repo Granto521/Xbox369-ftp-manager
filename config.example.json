@@ -1,0 +1,7 @@
+{
+  "host": "YOUR_XBOX_IP",
+  "port": 21,
+  "username": "YOUR_FTP_USERNAME",
+  "password": "YOUR_FTP_PASSWORD",
+  "passive": true
+}

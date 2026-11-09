@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xbox FTP Manager</title>
+
+<style>
+:root {
+    --bg: #080d0a;
+    --panel: #111a14;
+    --panel2: #18251b;
+    --green: #70e000;
+    --green2: #38b000;
+    --text: #edf5ee;
+    --muted: #9aaa9d;
+    --red: #ff5555;
+    --border: #29382d;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 16px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial, sans-serif;
+}
+
+header {
+    text-align: center;
+    padding: 15px 5px 22px;
+}
+
+header h1 {
+    margin: 0;
+    color: var(--green);
+    font-size: 25px;
+}
+
+header p {
+    color: var(--muted);
+    margin: 8px 0 0;
+    font-size: 13px;
+}
+
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 16px;
+}
+
+h2 {
+    color: var(--green);
+    font-size: 17px;
+    margin: 0 0 13px;
+}
+
+h3 {
+    font-size: 14px;
+    margin: 0 0 10px;
+}
+
+input, button {
+    font-size: 14px;
+    border-radius: 7px;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    color: white;
+    background: #080d0a;
+    border: 1px solid var(--border);
+    margin: 5px 0 10px;
+}
+
+button {
+    border: 0;
+    padding: 11px 13px;
+    background: var(--green2);
+    color: white;
+    font-weight: bold;
+    margin: 3px;
+    cursor: pointer;
+}
+
+button.secondary {
+    background: #344239;
+}
+
+button.danger {
+    background: #a92d2d;
+}
+
+button:disabled {
+    opacity: .45;
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 10px 0;
+}
+
+.path {
+    background: #080d0a;
+    color: var(--green);
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 7px;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    margin: 10px 0;
+}
+
+.file {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px;
+    margin: 6px 0;
+    min-width: 0;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    overflow-wrap: anywhere;
+    font-size: 14px;
+}
+
+.file-meta {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 5px;
+}
+
+.file button {
+    flex-shrink: 0;
+    padding: 9px;
+    font-size: 11px;
+}
+
+.file-icon {
+    font-size: 22px;
+}
+
+.status {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 7px 0;
+}
+
+#log {
+    background: #050805;
+    padding: 10px;
+    border-radius: 7px;
+    min-height: 60px;
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 12px;
+    color: #b8d6bd;
+    white-space: pre-wrap;
+}
+
+.progress {
+    height: 9px;
+    background: #263329;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress div {
+    height: 100%;
+    width: 0;
+    background: var(--green);
+}
+
+.small {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.selected {
+    border-color: var(--green);
+}
+
+@media (min-width: 850px) {
+    .columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        align-items: start;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🎮 XBOX FTP MANAGER</h1>
+    <p>Android Phone ↔ Xbox 360 RGH</p>
+</header>
+
+<section class="panel">
+    <h2>CONNECTION</h2>
+    <div class="status" id="connectionStatus">Checking Xbox connection...</div>
+    <button onclick="testConnection()">TEST CONNECTION</button>
+</section>
+
+<div class="columns">
+
+<section class="panel">
+    <h2>📁 REMOTE XBOX FILES</h2>
+    <div class="small">Browse your Xbox folders and choose an upload destination.</div>
+
+    <div class="path" id="remotePath">/</div>
+
+    <div class="toolbar">
+        <button class="secondary" onclick="remoteUp()">⬆ UP</button>
+        <button onclick="refreshRemote()">↻ REFRESH</button>
+        <button class="secondary" onclick="newRemoteFolder()">＋ FOLDER</button>
+    </div>
+
+    <div class="small">
+        Upload destination:
+    </div>
+    <input id="uploadTarget" value="/Hdd1/games" placeholder="Xbox destination folder">
+
+    <div id="remoteFiles">
+        Loading Xbox folders...
+    </div>
+</section>
+
+<section class="panel">
+    <h2>📱 PHONE STORAGE</h2>
+    <div class="small">Browse your Android phone and select a file to send to the Xbox.</div>
+
+    <div class="path" id="phonePath">/</div>
+
+    <div class="toolbar">
+        <button class="secondary" onclick="phoneUp()">⬆ UP</button>
+        <button onclick="refreshPhone()">↻ REFRESH</button>
+    </div>
+
+    <div class="status" id="phoneStatus">Loading phone storage...</div>
+    <div id="phoneFiles"></div>
+</section>
+
+</div>
+
+<section class="panel">
+    <h2>📤 UPLOAD TO XBOX</h2>
+
+    <div class="small">Selected phone file or folder:</div>
+    <div class="path" id="selectedFile">No file selected</div>
+
+    <div class="small">Xbox destination:</div>
+    <div class="path" id="destinationDisplay">/Hdd1/games</div>
+
+    <button id="uploadButton" onclick="uploadSelected()" disabled>
+        UPLOAD SELECTED FILE / FOLDER
+    </button>
+
+    <button class="secondary" onclick="clearSelection()">CLEAR SELECTION</button>
+</section>
+
+<section class="panel">
+    <h2>📊 TRANSFER MONITOR</h2>
+    <div id="transferStatus" class="status">No transfer running.</div>
+    <div class="progress"><div id="progressBar"></div></div>
+    <button class="danger" onclick="stopTransfer()">STOP TRANSFER</button>
+</section>
+
+<section class="panel">
+    <h2>📋 ACTIVITY LOG</h2>
+    <div id="log">Xbox FTP Manager ready.</div>
+</section>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let remotePath = "/";
+let phonePath = "/storage/emulated/0";
+let selectedPhoneFile = "";
+let statusTimer = null;
+
+async function api(url, data) {
+    const options = data ? {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+    } : {};
+
+    const response = await fetch(url, options);
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+        throw new Error(result.error || "Request failed");
+    }
+
+    return result;
+}
+
+function log(message) {
+    const time = new Date().toLocaleTimeString();
+    $("log").textContent = `[${time}] ${message}\n` + $("log").textContent;
+}
+
+function formatSize(bytes) {
+    bytes = Number(bytes || 0);
+
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+    if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + " MB";
+
+    return (bytes / 1073741824).toFixed(2) + " GB";
+}
+
+function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+function getItems(result) {
+    if (Array.isArray(result)) return result;
+    return result.items || result.files || result.entries || [];
+}
+
+function itemIsFolder(item) {
+    return item.type === "directory" ||
+           item.type === "dir" ||
+           item.type === "folder" ||
+           item.is_dir === true ||
+           item.is_directory === true;
+}
+
+function itemName(item) {
+    return item.name || item.filename || item.path || "";
+}
+
+function itemPath(item, current) {
+    if (item.path) return item.path;
+
+    const name = itemName(item);
+    return current === "/" ? "/" + name : current + "/" + name;
+}
+
+function updateDestination() {
+    $("uploadTarget").value = remotePath;
+    $("destinationDisplay").textContent = remotePath;
+}
+
+async function testConnection() {
+    $("connectionStatus").textContent = "Testing connection...";
+
+    try {
+        const result = await api("/api/test", {});
+        $("connectionStatus").textContent =
+            result.message || result.status || "Connection successful";
+        log("Xbox connection test completed.");
+        await refreshRemote();
+    } catch (error) {
+        $("connectionStatus").textContent = "Connection failed: " + error.message;
+        log("Connection error: " + error.message);
+    }
+}
+
+/* XBOX BROWSER */
+
+async function refreshRemote() {
+    $("remotePath").textContent = remotePath;
+    $("remoteFiles").textContent = "Loading Xbox folders...";
+
+    try {
+        const result = await api("/api/list?path=" + encodeURIComponent(remotePath));
+        const items = getItems(result);
+
+        $("remoteFiles").innerHTML = "";
+
+        if (!items.length) {
+            $("remoteFiles").textContent = "This folder is empty.";
+            return;
+        }
+
+        items.sort((a, b) => {
+            return Number(itemIsFolder(b)) - Number(itemIsFolder(a)) ||
+                itemName(a).localeCompare(itemName(b));
+        });
+
+        items.forEach(item => {
+            const name = itemName(item);
+            const folder = itemIsFolder(item);
+            const path = itemPath(item, remotePath);
+
+            const row = document.createElement("div");
+            row.className = "file";
+
+            const icon = folder ? "📁" : "📄";
+
+            row.innerHTML = `
+                <div class="file-icon">${icon}</div>
+                <div class="file-info">
+                    <div class="file-name">${escapeHTML(name)}</div>
+                    <div class="file-meta">${folder ? "Folder" : formatSize(item.size)}</div>
+                </div>
+                <button class="secondary">${folder ? "OPEN" : "SELECT DESTINATION"}</button>
+            `;
+
+            row.querySelector("button").onclick = () => {
+                if (folder) {
+                    remotePath = path;
+                    refreshRemote();
+                } else {
+                    $("uploadTarget").value = remotePath;
+                    $("destinationDisplay").textContent = remotePath;
+                    log("Upload destination set to " + remotePath);
+                }
+            };
+
+            $("remoteFiles").appendChild(row);
+        });
+
+    } catch (error) {
+        $("remoteFiles").textContent = "Xbox folder error: " + error.message;
+        log("Xbox listing error: " + error.message);
+    }
+}
+
+function remoteUp() {
+    if (remotePath === "/") return;
+
+    const parts = remotePath.split("/").filter(Boolean);
+    parts.pop();
+
+    remotePath = "/" + parts.join("/");
+    if (remotePath === "") remotePath = "/";
+
+    refreshRemote();
+}
+
+/* PHONE BROWSER */
+
+
+async function refreshPhone() {
+    $("phonePath").textContent = phonePath;
+    $("phoneFiles").textContent = "Loading phone files...";
+    $("phoneStatus").textContent = "Reading Android storage...";
+
+    try {
+        const result = await api(
+            "/api/local-list?path=" + encodeURIComponent(phonePath)
+        );
+
+        const items = getItems(result);
+        $("phoneFiles").innerHTML = "";
+        $("phoneStatus").textContent = items.length + " items found";
+
+        items.sort((a, b) =>
+            Number(itemIsFolder(b)) - Number(itemIsFolder(a)) ||
+            itemName(a).localeCompare(itemName(b))
+        );
+
+        if (!items.length) {
+            $("phoneFiles").textContent = "This folder is empty.";
+            return;
+        }
+
+        items.forEach(item => {
+            const name = itemName(item);
+            const folder = itemIsFolder(item);
+            const path = itemPath(item, phonePath);
+
+            const row = document.createElement("div");
+            row.className = "file";
+
+            row.innerHTML = `
+                <div class="file-icon">${folder ? "📁" : "📄"}</div>
+                <div class="file-info">
+                    <div class="file-name">${escapeHTML(name)}</div>
+                    <div class="file-meta">${folder ? "Folder" : formatSize(item.size)}</div>
+                </div>
+                <button class="secondary">${folder ? "OPEN" : "SELECT"}</button>
+                ${folder ? '<button>SELECT FOLDER</button>' : ''}
+            `;
+
+            const buttons = row.querySelectorAll("button");
+
+            buttons[0].onclick = () => {
+                if (folder) {
+                    phonePath = path;
+                    refreshPhone();
+                } else {
+                    selectPhoneFile(path, row);
+                }
+            };
+
+            if (folder) {
+                buttons[1].onclick = () => selectPhoneFile(path, row);
+            }
+
+            $("phoneFiles").appendChild(row);
+        });
+
+    } catch (error) {
+        $("phoneStatus").textContent = "Phone storage error: " + error.message;
+        $("phoneFiles").textContent = error.message;
+        log("Phone listing error: " + error.message);
+    }
+}
+
+
+function phoneUp() {
+    if (phonePath === "/" || phonePath === "") return;
+
+    const parts = phonePath.split("/").filter(Boolean);
+    parts.pop();
+
+    phonePath = "/" + parts.join("/");
+    if (phonePath === "") phonePath = "/";
+
+    refreshPhone();
+}
+
+function selectPhoneFile(path, row) {
+    selectedPhoneFile = path;
+
+    document.querySelectorAll("#phoneFiles .file").forEach(item => {
+        item.classList.remove("selected");
+    });
+
+    row.classList.add("selected");
+
+    $("selectedFile").textContent = path;
+    $("uploadButton").disabled = false;
+
+    log("Selected phone file or folder: " + path);
+}
+
+function clearSelection() {
+    selectedPhoneFile = "";
+    $("selectedFile").textContent = "No file selected";
+    $("uploadButton").disabled = true;
+
+    document.querySelectorAll("#phoneFiles .file").forEach(item => {
+        item.classList.remove("selected");
+    });
+}
+
+/* UPLOAD */
+
+async function uploadSelected() {
+    if (!selectedPhoneFile) {
+        alert("Select a phone file first.");
+        return;
+    }
+
+    const destination = $("uploadTarget").value.trim();
+
+    if (!destination) {
+        alert("Choose an Xbox destination folder.");
+        return;
+    }
+
+    $("uploadButton").disabled = true;
+    $("transferStatus").textContent = "Starting upload...";
+
+    try {
+        const result = await api("/api/upload", {
+            local_path: selectedPhoneFile,
+            remote_path: destination
+        });
+
+        log("Upload started: " + selectedPhoneFile);
+        $("transferStatus").textContent =
+            result.message || result.status || "Upload started.";
+
+        updateStatus();
+
+    } catch (error) {
+        $("transferStatus").textContent = "Upload error: " + error.message;
+        log("Upload error: " + error.message);
+    }
+
+    $("uploadButton").disabled = false;
+}
+
+async function newRemoteFolder() {
+    const name = prompt("Enter the new Xbox folder name:");
+
+    if (!name) return;
+
+    try {
+        await api("/api/mkdir", {
+            path: remotePath,
+            name: name
+        });
+
+        log("Created Xbox folder: " + name);
+        refreshRemote();
+
+    } catch (error) {
+        alert(error.message);
+        log("Folder error: " + error.message);
+    }
+}
+
+async function stopTransfer() {
+    try {
+        await api("/api/stop", {});
+        log("Stop requested.");
+        updateStatus();
+    } catch (error) {
+        log("Stop error: " + error.message);
+    }
+}
+
+async function updateStatus() {
+    try {
+        const result = await api("/api/status");
+
+        if (result.message || result.status) {
+            $("transferStatus").textContent = result.message || result.status;
+        }
+
+        if (result.progress !== undefined) {
+            $("progressBar").style.width =
+                Math.max(0, Math.min(100, Number(result.progress))) + "%";
+        }
+
+        if (result.connected !== undefined) {
+            $("connectionStatus").textContent =
+                result.connected ? "🟢 Xbox connected" : "🔴 Xbox disconnected";
+        }
+
+    } catch (error) {
+        $("transferStatus").textContent = "Waiting for transfer status...";
+    }
+}
+
+/* START */
+
+refreshRemote();
+refreshPhone();
+updateStatus();
+
+statusTimer = setInterval(updateStatus, 1500);
+</script>
+
+</body>
+</html>
